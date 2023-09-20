@@ -1,13 +1,19 @@
+import "@endo/init";
 import { Far } from '@endo/far';
 import './compartment-types.d.ts';
 
-interface IMethodDescriptor {
+type IKernelSetupOptions = {
+  initialObjects?: IRestrictedObject[],
+  prompt: (methodName: string, candidates: IRestrictedObject[], addressBook: WeakMap<IRestrictedObject, string>) => Promise<number>,
+}
+
+export interface IMethodDescriptor {
   methodName: string;
   [key: string]: any;
 }
 
 type ISpecifier = (reqDesc: any, methodDesc: any) => boolean;
-type IRestrictedObject = {
+export type IRestrictedObject = {
   description: IMethodDescriptor,
   object: any,
 }
@@ -16,7 +22,6 @@ const restrictedObjects: Set<IRestrictedObject> = new Set();
 const specifiers: Map<string, ISpecifier> = new Map();
 specifiers.set('methodName', (reqDesc, methodDesc) => {
   if (typeof reqDesc !== 'string' || typeof methodDesc !== 'string') {
-    console.log('methodName specifier called with', reqDesc, methodDesc);
     throw new Error('specifier for method name must be a string.');
   }
   return !!reqDesc && reqDesc === methodDesc;
@@ -26,7 +31,6 @@ const namesToObjects: Map<string, any> = new Map();
 const objectsToNames = new WeakMap();
 
 export function registerObject (name: string, object: any) {
-  console.log('registering object with name and object', name, object)
   namesToObjects.set(name, object);
   objectsToNames.set(object, name);
 }
@@ -36,15 +40,14 @@ interface IBootstrap {
   registerRestrictedObject: (object: IRestrictedObject) => void;
 }
 
-type IKernelSetupOptions = {
-  initialObjects?: IRestrictedObject[],
-}
+
 export function createKernel (options: IKernelSetupOptions) {
   const { initialObjects = [] } = options;
+  if (!('prompt' in options)) {
+    throw new Error('Must provide a prompt function to the gorilla core');
+  }
 
-  console.log('creating kernel with initial objects: ', initialObjects);
   initialObjects.forEach((object) => {
-    console.log('iterating object', object);
     register(object.description.methodName, object);
   })
 
@@ -52,18 +55,7 @@ export function createKernel (options: IKernelSetupOptions) {
     async request (descriptor: IMethodDescriptor): Promise<any> {
       const matchedObjects = getRestrictedObjectsForDescriptor(descriptor);
 
-      console.log('matchedObjects are ', matchedObjects);
-      const matchedNames = matchedObjects.map((object) => {
-        return objectsToNames.get(object);
-      });
-
-      const message = `The current site is requesting a ${descriptor.methodName} from you. Enter the number to select one of your available options:
-        ${matchedNames.map((name, index) => { return `${index+1}: ${name}` }).join('\n')}`;
-
-      const index = Number(prompt(message)) - 1;
-      if (index === -1) {
-        throw new Error('User rejected request');
-      }
+      const index = await options.prompt(descriptor.methodName, matchedObjects, objectsToNames);
       return matchedObjects[index].object;
     },
 
@@ -101,7 +93,6 @@ export function createKernel (options: IKernelSetupOptions) {
 }
 
 function register (petName: string, object: IRestrictedObject) {
-  console.log('registering object with petName and object', petName, object)
   restrictedObjects.add(object);
   objectsToNames.set(object, petName);
   namesToObjects.set(petName, object);

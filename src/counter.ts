@@ -1,5 +1,6 @@
 
 import { createKernel } from './kernel.ts'
+import { promptUser } from './simple-prompt.ts';
 
 let count = 0;
 const counterFunc = async () => {
@@ -7,6 +8,7 @@ const counterFunc = async () => {
   return count;
 }
 const kernel = createKernel({
+  prompt: promptUser,
   initialObjects: [
     {
       object: counterFunc,
@@ -18,10 +20,8 @@ const kernel = createKernel({
 });
 
 export async function setupCounter(element: HTMLButtonElement) {
-  let counter = 0
   const setCounter = (count: number) => {
-    counter = count
-    element.innerHTML = `count is ${counter}`
+    element.innerHTML = `count is ${count}`
   }
 
   const increment = await kernel.request({
