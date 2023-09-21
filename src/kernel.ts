@@ -4,7 +4,7 @@ import './compartment-types.d.ts';
 
 type IKernelSetupOptions = {
   initialObjects?: IRestrictedObject[],
-  prompt: (methodName: string, candidates: IRestrictedObject[], addressBook: WeakMap<IRestrictedObject, string>) => Promise<number>,
+  prompt: (methodName: string, candidates: IRestrictedObject[], addressBook: IAddressBook) => Promise<any>,
 }
 
 export interface IMethodDescriptor {
@@ -27,8 +27,16 @@ specifiers.set('methodName', (reqDesc, methodDesc) => {
   return !!reqDesc && reqDesc === methodDesc;
 })
 
+export type IAddressBook = {
+  namesToObjects: Map<string, any>,
+  objectsToNames: WeakMap<any, string>,
+}
 const namesToObjects: Map<string, any> = new Map();
-const objectsToNames = new WeakMap();
+const objectsToNames: WeakMap<any, string> = new WeakMap();
+const addressBook: IAddressBook = {
+  namesToObjects,
+  objectsToNames,
+}
 
 export function registerObject (name: string, object: any) {
   namesToObjects.set(name, object);
@@ -55,8 +63,7 @@ export function createKernel (options: IKernelSetupOptions) {
     async request (descriptor: IMethodDescriptor): Promise<any> {
       const matchedObjects = getRestrictedObjectsForDescriptor(descriptor);
 
-      const index = await options.prompt(descriptor.methodName, matchedObjects, objectsToNames);
-      return matchedObjects[index].object;
+      return await options.prompt(descriptor.methodName, matchedObjects, addressBook);
     },
 
     async registerRestrictedObject (restricted: IRestrictedObject) {

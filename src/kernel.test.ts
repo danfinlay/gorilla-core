@@ -9,7 +9,7 @@ test('can count a few numbers', async () => {
     return count;
   }
   const kernel = createKernel({
-    prompt: async () => 0,
+    prompt: async () => counterFunc,
     initialObjects: [
       {
         object: counterFunc,

@@ -1,14 +1,15 @@
-import { IRestrictedObject } from './kernel';
+import { IRestrictedObject, IAddressBook } from './kernel';
 
-export async function promptUser (methodName: string, candidates: IRestrictedObject[], addressBook: Map<IRestrictedObject, string>): Promise<number> {
+export async function promptUser (methodName: string, candidates: IRestrictedObject[], addressBook: IAddressBook): Promise<number> {
 
-  const message = `The current site is requesting a ${methodName} from you. Enter the number to select one of your available options:
-  ${candidates.map((candidate, index) => { return `${index+1}: ${addressBook.get(candidate)}` }).join('\n')}`;
+  const message = `The current site is requesting a ${methodName} from you. Enter the name of one to grant it, or cancel to reject:
+  ${candidates.map((candidate) => { return `${addressBook.objectsToNames.get(candidate)}` }).join('\n')}`;
 
-  const index = Number(prompt(message)) - 1;
-  if (index === -1) {
+  const chosenName = prompt(message);
+  if (!chosenName) {
     throw new Error('User rejected request');
   }
 
-  return index
+  const selected = addressBook.namesToObjects.get(chosenName);
+  return selected; 
 }
