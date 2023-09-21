@@ -61,8 +61,10 @@ export function createKernel (options: IKernelSetupOptions) {
 
   const bootstrap: IBootstrap = {
     async request (descriptor: IMethodDescriptor): Promise<any> {
+      // Filter options for type matches:
       const matchedObjects = getRestrictedObjectsForDescriptor(descriptor);
 
+      // Prompt the user:
       return await options.prompt(descriptor.methodName, matchedObjects, addressBook);
     },
 

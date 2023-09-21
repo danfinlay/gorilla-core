@@ -10,6 +10,6 @@ export async function promptUser (methodName: string, candidates: IRestrictedObj
     throw new Error('User rejected request');
   }
 
-  const selected = addressBook.namesToObjects.get(chosenName);
-  return selected; 
+  const chosen = addressBook.namesToObjects.get(chosenName);
+  return chosen.object;
 }
