@@ -78,20 +78,16 @@ export function createKernel (options: IKernelSetupOptions) {
       let petName;
       let promptText = 'What would you like to name it?'
       while (!petName) {
-        const petName = prompt(promptText);
+        petName = prompt(promptText);
         if (!petName || petName === '') {
           throw new Error('Must provide a name.');
         }
 
         // Check if it exists already:
-        const existing = namesToObjects.get(petName);
+        let existing = namesToObjects.get(petName);
         if (existing) {
-          promptText = `That name is already taken. Are you sure?`
-          const sure = confirm(promptText);
-          if (sure) {
-            register(petName, restricted);
-          }
-          promptText = `What would you like to name it?`
+          petName = prompt(`That name is already taken. Please choose another.`) || '';
+          existing = namesToObjects.get(petName);
         }
 
         register(petName, restricted);
