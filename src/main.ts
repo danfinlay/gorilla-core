@@ -17,6 +17,7 @@ import { setupCounter } from './counter.ts'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
+    <img src="/gorilla.png"/>
     <h1>Gorilla Core</h1>
     <p>An extensible JavaScript kernel for building secure applications</p>
     <div class="card">
