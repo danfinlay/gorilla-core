@@ -2,18 +2,34 @@
 import { createKernel } from './kernel.ts'
 import { promptUser } from './simple-prompt.ts';
 
-let count = 0;
+let count = 1;
 const counterFunc = async () => {
   count++;
+  return count;
+}
+const doublerFunc = async () => {
+  count *= 2;
   return count;
 }
 const kernel = createKernel({
   prompt: promptUser,
   initialObjects: [
     {
-      object: counterFunc,
-      description: {
-        methodName: 'counter',
+      petName: 'counter',
+      object: {
+        object: counterFunc,
+        description: {
+          methodName: 'counter',
+        }
+      }
+    },
+    {
+      petName: 'doubler',
+      object: {
+        object: doublerFunc,
+        description: {
+          methodName: 'counter',
+        }
       }
     }
   ]
@@ -29,8 +45,7 @@ export async function setupCounter(element: HTMLButtonElement) {
   });
 
   element.addEventListener('click', async () => {
-    const count = await increment();
-    setCounter(count);
+    setCounter(await increment(count));
   })
-  setCounter(0)
+  setCounter(count)
 }

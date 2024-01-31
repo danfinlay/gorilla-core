@@ -1,19 +1,9 @@
 import './style.css'
-
 import "@endo/init";
-// import { makeCapTP, E } from '@endo/captp';
-// import 'ses';
-// import '@endo/errors';
-// window.E = E;
-// lockdown();
-
-
-
 
 import typescriptLogo from './typescript.svg'
 import viteLogo from '/vite.svg'
 import { setupCounter } from './counter.ts'
-
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>

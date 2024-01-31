@@ -1,31 +1,17 @@
 import "@endo/init";
 import { Far } from '@endo/far';
 import './compartment-types.d.ts';
+import { IRestrictedObject, IMethodDescriptor } from "./type-system.ts";
 
 type IKernelSetupOptions = {
-  initialObjects?: IRestrictedObject[],
+  initialObjects?: Array<{
+    petName: string,
+    object: IRestrictedObject,
+  }>,
   prompt: (methodName: string, candidates: IRestrictedObject[], addressBook: IAddressBook) => Promise<any>,
 }
 
-export interface IMethodDescriptor {
-  methodName: string;
-  [key: string]: any;
-}
-
-type ISpecifier = (reqDesc: any, methodDesc: any) => boolean;
-export type IRestrictedObject = {
-  description: IMethodDescriptor,
-  object: any,
-}
-
 const restrictedObjects: Set<IRestrictedObject> = new Set();
-const specifiers: Map<string, ISpecifier> = new Map();
-specifiers.set('methodName', (reqDesc, methodDesc) => {
-  if (typeof reqDesc !== 'string' || typeof methodDesc !== 'string') {
-    throw new Error('specifier for method name must be a string.');
-  }
-  return !!reqDesc && reqDesc === methodDesc;
-})
 
 export type IAddressBook = {
   namesToObjects: Map<string, any>,
@@ -48,15 +34,30 @@ interface IBootstrap {
   registerRestrictedObject: (object: IRestrictedObject) => void;
 }
 
-
 export function createKernel (options: IKernelSetupOptions) {
   const { initialObjects = [] } = options;
   if (!('prompt' in options)) {
     throw new Error('Must provide a prompt function to the gorilla core');
   }
 
+  register('Method name type enforcer', {
+    description: {
+      methodName: 'Type enforcer',
+      typeEnforcerName: 'methodName',
+      localization: {
+        en: `This essential kernel type allows applications to request services by a common name of the type of service it is.`
+      }
+    },
+    object: (reqDesc: any, methodDesc: any) => {
+      if (typeof reqDesc !== 'string' || typeof methodDesc !== 'string') {
+        throw new Error('specifier for method name must be a string.');
+      }
+      return !!reqDesc && reqDesc === methodDesc;
+    },
+  })
+
   initialObjects.forEach((object) => {
-    register(object.description.methodName, object);
+    register(object.petName, object.object);
   })
 
   const bootstrap: IBootstrap = {
@@ -69,7 +70,7 @@ export function createKernel (options: IKernelSetupOptions) {
     },
 
     async registerRestrictedObject (restricted: IRestrictedObject) {
-      const approved = confirm(`Would you like to add a method to your wallet?: ${JSON.stringify(restricted.description)}`);
+      const approved = confirm(`Would you like to add a method to your wallet?: ${JSON.stringify(restricted.object.description)}`);
       if (!approved) {
         throw new Error('User rejected request');
       }
@@ -107,33 +108,46 @@ function register (petName: string, object: IRestrictedObject) {
   namesToObjects.set(petName, object);
 }
 
+type ISpecifier = (reqDesc: any, methodDesc: any) => boolean;
+function methodNameSpecifier (reqDesc: string, methodDesc: string): boolean {
+  if (typeof reqDesc !== 'string' || typeof methodDesc !== 'string') {
+    throw new Error('specifier for method name must be a string.');
+  }
+  return !!reqDesc && reqDesc === methodDesc;
+}
+
+/**
+ * This function is used to filter the restricted objects for a given descriptor.
+ * It first pulls out all the restrictedObject members whose `methodName` is `Type enforcer`,
+ * It then uses any of the keys in the description to select the appropriate specifier,
+ * and run all of the specifier's checks as a filter against all the restricted objects.
+ */
 function getRestrictedObjectsForDescriptor (
   description: IMethodDescriptor
 ) {
 
+  const specifiers: IRestrictedObject[] = [...restrictedObjects.values()]
+  .filter((object: IRestrictedObject) => {
+    return object.description.methodName === 'Type enforcer';
+  });
 
   let matchedObjects = [...restrictedObjects.values()]
   .filter((object: IRestrictedObject) => {
     let matched = true;
 
-
-    const selectedSpecifiers = Object.keys(description)
-    .map((specifierKey) => {
-      const specifier = specifiers.get(specifierKey);
+    Object.keys(description)
+    .forEach((specifierKey) => {
+      const specifier = specifiers.find((specifier) => {
+        return specifier.description.typeEnforcerName === specifierKey;
+      });
       if (!specifier) {
         throw new Error(`Unable to provide specificity for descriptor ${specifierKey} with description ${JSON.stringify(description[specifierKey])}`);
       }
 
       if (specifierKey in object.description) {
-        const specifierCompartment = new Compartment({
-          specifier,
-        }); 
-        if (!specifierCompartment.evaluate(`
-            specifier(
-              ${JSON.stringify(description[specifierKey])},
-              ${JSON.stringify(object.description[specifierKey])}
-            )
-            `
+        if (!specifier.object(
+          description[specifierKey],
+          object.description[specifierKey]
         )) {
           matched = false;
         }
